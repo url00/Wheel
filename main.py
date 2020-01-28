@@ -1,19 +1,20 @@
 import numpy as np
 import os
 
+# hobby: how much desire / how much time
 hobbies_factor = {
-    "cooking": 5.5,
-    "drawing": 5.0,
-    "music": 6.0,
-    "dating": 2.0,
-    "hanging with friends": 5.0,
-    "biking/treadmill": 3.0,
-    "3d modeling": 2.0,
-    "vball/rock climbing": 0.5,
-    "yoga": 3.0,
-    "photography": 5.0,
-    "cleaning": 5.0,
-    "programming": 4.0,
+    "cooking": 5.5 / 1,
+    "drawing": 5.0 / 1,
+    "music": 6.0 / 1,
+    "dating": 3.0 / 1.5,
+    "hanging with friends": 5.0 / 1.5,
+    "biking/treadmill": 3.0 / 1,
+    "3d modeling": 1.0 / 1,
+    "vball/rock climbing": 0.5 / 1.7,
+    "yoga": 3.0 / 1,
+    "photography": 5.0 / 1.4,
+    "cleaning": 5.0 / 1,
+    "programming": 4.0 / 1,
 }
 
 
@@ -32,10 +33,10 @@ def read_last(f):
     while last:
         old_last = last
         last = f.readline()
-    return old_last
+    return old_last.strip()
 
 
-def main():
+def spin():
     hobbies_factor_norm = norm(hobbies_factor)
 
     hobbies_history = {}
@@ -55,25 +56,38 @@ def main():
             hobbies_history[hobby] = 1
     hobbies_history_sum = sum(hobbies_history.values())
 
+    last = ""
+    with open("history.txt", "r") as f:
+        last = read_last(f)
+
     hobbies_scaled_prob = {}
     for hobby, factor in hobbies_factor_norm.items():
+        if hobby == last:
+            # Note that this doesn't make it impossible, because post-normalization
+            # there's still a slight chance.
+            hobbies_scaled_prob[hobby] = 0
+            continue
+
         hobby_count = hobbies_history[hobby]
         hobby_history_norm = hobby_count / hobbies_history_sum
         hobbies_scaled_prob[hobby] = factor * (1 / hobby_history_norm)
     hobbies_scaled_prob_norm = norm(hobbies_scaled_prob)
 
-    last = ""
-    with open("history.txt", "r") as f:
-        last = read_last(f)
+    for hobby, prob in hobbies_scaled_prob_norm.items():
+        print(f"{hobby} -> {prob}")
 
     with open("history.txt", "a") as f:
         p = np.array(list(hobbies_scaled_prob_norm.values()))
         v = np.array(list(hobbies_scaled_prob_norm.keys()))
         result = np.random.choice(v, p=p)
-        while result == last:
-            result = np.random.choice(v, p=p)
-        print(f"Wheel says: you should do some {result}.")
         f.write(f"{result}\n")
+        f.flush()
+        return result
+
+
+def main():
+    result = spin()
+    print(f"Wheel says: you should do some {result}.")
 
 
 if __name__ == "__main__":
